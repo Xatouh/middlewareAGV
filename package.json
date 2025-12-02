@@ -1,0 +1,17 @@
+{
+  "name": "trabajo-final",
+  "version": "1.0.0",
+  "description": "",
+  "main": "cliente_OPC_UA.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-opcua": "^2.158.0",
+    "node-opcua-client": "^2.158.0",
+    "ws": "^8.18.3"
+  }
+}
