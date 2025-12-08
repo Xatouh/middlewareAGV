@@ -1,5 +1,19 @@
-const { init, readRobots } = require("./cliente_OPC_UA")
+const { init, readData } = require("./cliente_OPC_UA")
 const { iniciarWebSocket, enviarATodos } = require("./websocket")
+
+const opcua = require("node-opcua");
+
+async function discoverServers(ldsUrl) {
+    try {
+        const servers = await opcua.findServers(ldsUrl);
+        return servers;
+    } catch(e) {
+        console.error("Error descubriendo servidores:", e);
+        return [];
+    }
+}
+
+
 
 const urls = ["opc.tcp://127.0.0.1:4840/robot1/","opc.tcp://127.0.0.1:4841/robot2/"]
 
@@ -8,13 +22,27 @@ function sleep(ms) {
 }
 
 async function main() {
+
+    const servers = await discoverServers("opc.tcp://127.0.0.1:4840");
+    console.log("Discovered servers:", servers);
+    console.log(typeof(servers.servers))
+    const uris = servers.servers.map(server => server.applicationUri).flat();
+    const urls = servers.servers.map(server => server.discoveryUrls).flat();
+    console.log("Application URIs:", uris);
+    console.log("Discovery URLs:", urls);
+
     await init(urls)
     iniciarWebSocket(7777)
     while (true){
         try {
                 
-            const data = await readRobots();
-            console.log(data)
+            const dataRobots = await readData("robots");
+            const dataStations = await readData("stations");
+            const data = {robots: dataRobots, stations: dataStations};
+            //un log bonito para mostrar los valores de los robots y estaciones en consola
+            console.log("Robots:", data.robots);
+            console.log("Stations:", data.stations);
+            
             enviarATodos(data)
             await sleep(1000)
         }
