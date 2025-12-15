@@ -1,8 +1,10 @@
 const { OPCUAClient, AttributeIds } = require("node-opcua");
 
 var robot_connections = {}
+var robot_id = {}
 
 var station_connections = {}
+var station_id = {}
 
 var connections = {}
 async function conectarAUnServidor(endpointUrl) {
@@ -17,17 +19,15 @@ async function conectarAUnServidor(endpointUrl) {
     });
     
     try {
-        // 1. Conectar
+
         console.log("Conectando a", endpointUrl);
         await client.connect(endpointUrl);
         console.log("Conectado a", endpointUrl);
 
-        // 2. Crear Sesión
         const session = await client.createSession();
         console.log("Sesión creada");
 
         return { client, session }
-        // ... hacer cosas ...
 
     } catch (err) {
         console.log("Error: no se pudo conectar a: ", endpointUrl);
@@ -52,8 +52,8 @@ async function leerNombre(session, nodeId) {
 }
 
 function mapear(valor, max) {
-    const minOriginal = -3;
-    const maxOriginal = 3;
+    const minOriginal = -10;
+    const maxOriginal = 10;
     const minNuevo = 0;
     const maxNuevo = max;
     
@@ -81,13 +81,14 @@ async function AGV(session, id){
     const bateria = await leerValor(session, "ns=2;i=6027")
     return {
         id: id, 
-        Posicion_X: mapear(x,960),
-        Posicion_Y: mapear(y,640),
+        Posicion_X: x,
+        Posicion_Y: y,
         Nivel_Bateria: Math.trunc(bateria),
         Temperatura_Bateria: await leerValor(session, "ns=2;i=6028"),
-        Estado_Carga: await leerValor(session, "ns=2;i=6029"),
+        Estado_Carga: await leerValor(session, "ns=2;i=6030"),
         
-        Estado_Operativo: await leerValor(session, "ns=2;i=6030"),
+        // Cararceteristicas extras (Robot 2)
+        Estado_Operativo: !(await leerValor(session, "ns=2;i=6029")),
         Temperatura_Motor: await leerValor(session, "ns=2;i=6031"),
     }
 }
@@ -102,17 +103,20 @@ async function readData(type) {
     for (const url in connections) {
 
         const session = connections[url].session;
-
         if (type === "stations") {
+            robotName = parseInt(station_id[url].slice(-1)) // obtener el id del robot desde el applicationUri
+
             const station = await chargeStation(session, robotName)
             data.push(station)
-            robotName++
+            
             continue
         }
         else if (type === "robots") {
+            robotName = parseInt(robot_id[url].slice(-1)) // obtener el id del robot desde el applicationUri
+
             robot = await AGV(session, robotName)
             data.push(robot)
-            robotName++
+            continue
         }
     }
     return {data}
@@ -137,7 +141,7 @@ async function chargeStation(session, id) {
 
 
 
-async function init(urls) {
+async function init(urls, uris) {
     // desde el 1 porque el 0 es el LDS
     for (var i = 1; i < urls.length; i++){
         try {
@@ -146,9 +150,11 @@ async function init(urls) {
             if (connection) {
                 if (urls[i].toLowerCase().includes("robot")) {
                     robot_connections[urls[i]] = connection;
+                    robot_id[urls[i]] = uris[i];
                 }
                 if (urls[i].toLowerCase().includes("estacion")) {
                     station_connections[urls[i]] = connection;
+                    station_id[urls[i]] = uris[i];
                 }
             } else {
                 console.log("Error: No se pudo realizar la conexión con el servidor "+ urls[i])
