@@ -33,7 +33,7 @@ function sleep(ms) {
 
 async function main() {
 
-    const servers = await discoverServers("opc.tcp://127.0.0.1:4840");
+    const servers = await discoverServers("opc.tcp://localhost:4840");
     console.log("Discovered servers:", servers);
     console.log(typeof(servers.servers))
     const uris = servers.servers.map(server => server.applicationUri).flat();
